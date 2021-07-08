@@ -15,6 +15,10 @@ import (
 	"github.com/michael-wang/snippetbox/pkg/models/mysql"
 )
 
+type contextKey string
+
+const keyIsAuthenticated = contextKey("isAuthenticated")
+
 // application struct holds application-wide dependencies.
 type application struct {
 	errorLog      *log.Logger
