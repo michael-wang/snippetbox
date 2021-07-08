@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/ory/nosurf"
 )
 
 func secureHeaders(next http.Handler) http.Handler {
@@ -46,4 +48,15 @@ func (app *application) requireAuthentication(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func noSurf(next http.Handler) http.Handler {
+	csrfHandler := nosurf.New(next)
+	// Ref: https://developer.mozilla.org/zh-TW/docs/Web/HTTP/Cookies#secure_%E4%BB%A5%E5%8F%8A_httponly_cookies
+	csrfHandler.SetBaseCookie(http.Cookie{
+		HttpOnly: true, // for XSS
+		Path:     "/",  // send cookie for path domain/***
+		Secure:   true, // only send cookie through https
+	})
+	return csrfHandler
 }
