@@ -1,17 +1,22 @@
 package main
 
 import (
+	"html"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/golangcollege/sessions"
 	"github.com/michael-wang/snippetbox/pkg/models/mock"
 )
+
+var csrfTokenRX = regexp.MustCompile(`<input type='hidden' name='csrf_token' value='(.+)'`)
 
 func newTestApplication(t *testing.T) *application {
 	templateCache, err := newTemplateCache("./../../ui/html")
@@ -64,5 +69,28 @@ func (svr *testServer) get(t *testing.T, urlPath string) (int, http.Header, []by
 	if err != nil {
 		t.Fatal(err)
 	}
+	return resp.StatusCode, resp.Header, body
+}
+
+func extractCSRFToken(t *testing.T, body []byte) string {
+	matches := csrfTokenRX.FindSubmatch(body)
+	if len(matches) < 2 {
+		t.Fatal("no csrf token found in body")
+	}
+	return html.UnescapeString(string(matches[1]))
+}
+
+func (svr *testServer) postForm(t *testing.T, urlPath string, form url.Values) (int, http.Header, []byte) {
+	resp, err := svr.Client().PostForm(svr.URL+urlPath, form)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	return resp.StatusCode, resp.Header, body
 }
